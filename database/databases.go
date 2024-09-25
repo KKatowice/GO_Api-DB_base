@@ -3,37 +3,48 @@ package databases
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
+
+	jsoniter "github.com/json-iterator/go"
 
 	_ "github.com/go-sql-driver/mysql"
 
 	"tryGo_two/database/sqlc"
-
-	"github.com/joho/godotenv"
 )
 
-func GetUsers() []byte {
-	ctx := context.Background()
-	errEnv := godotenv.Load()
-	if errEnv != nil {
-		panic("Error loading .env file")
-	}
-	dbse, err := sql.Open("mysql", os.Getenv("DB_URL"))
+var (
+	dbse    *sql.DB
+	queries *sqlc.Queries
+	once    sync.Once
+	json    jsoniter.API
+)
+
+func initDB() {
+	json = jsoniter.ConfigCompatibleWithStandardLibrary
+	var err error
+	dbse, err = sql.Open("mysql", os.Getenv("DB_URL"))
+	dbse.SetMaxOpenConns(1000)
 	if err != nil {
 		panic(err)
 	}
-	queries := sqlc.New(dbse)
+	queries = sqlc.New(dbse)
+	fmt.Println("solo 1??")
+
+}
+
+func GetUsers() []byte {
+	once.Do(initDB)
+	ctx := context.Background()
+
 	urs, err := queries.ListUsers(ctx)
 	if err != nil {
 		fmt.Println("Error", err)
-
 	}
-	jsonResponse, err := json.Marshal(urs)
+	jsonResponse, err := json.Marshal(&urs)
 	if err != nil {
 		fmt.Println("jsonResponse error convert")
-
 	}
 
 	return jsonResponse

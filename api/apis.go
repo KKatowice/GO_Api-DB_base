@@ -12,7 +12,10 @@ func ApisTest() {
 	app := fiber.New()
 	app.Get("/", func(c *fiber.Ctx) error {
 		usr := databases.GetUsers()
-		return c.SendString(string(usr))
+		if usr == nil {
+			return c.Status(fiber.StatusInternalServerError).SendString("Error retrieving users")
+		}
+		return c.Status(fiber.StatusOK).SendString(string(usr))
 	})
 
 	//start server
